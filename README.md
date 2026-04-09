@@ -29,6 +29,23 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1
 - `RUSTUP_HOME = D:\exe\SNW_\rustup`
 - `toolchain = stable-x86_64-pc-windows-msvc`
 
+## 中文字体说明
+
+程序会在启动时自动尝试加载中文字体（优先顺序）：
+- `D:\exe\SNW_ECS\assets\fonts\NotoSansSC-Regular.otf`
+- `D:\exe\SNW_ECS\assets\fonts\NotoSansCJKsc-Regular.otf`
+- `C:\Windows\Fonts\simhei.ttf`
+- `C:\Windows\Fonts\Deng.ttf`
+- `C:\Windows\Fonts\simsun.ttc`
+- `C:\Windows\Fonts\msyh.ttc`
+
+如果你要强制指定字体文件，可设置环境变量：
+
+```powershell
+$env:SNW_EGUI_FONT = "D:\path\to\your\font.ttf"
+powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1
+```
+
 ## 使用说明
 
 1. 左侧 `全局心智参数` 调整衰减强度和短期容量。

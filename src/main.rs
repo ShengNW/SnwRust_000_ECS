@@ -266,7 +266,16 @@ fn mind_console_ui_system(
     )>,
     short_memories: Query<(Entity, &MemoryData), With<ShortTermMemory>>,
     todos: Query<(Entity, &TodoData)>,
+    mut font_injected: Local<bool>,
 ) {
+    if !*font_injected {
+        ui_state.save_load_notice = match try_install_cjk_font(&mut contexts) {
+            Some(name) => format!("已加载中文字体：{name}"),
+            None => "未找到可用中文字体，可设置 SNW_EGUI_FONT 指向 .ttf/.otf".to_owned(),
+        };
+        *font_injected = true;
+    }
+
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -562,6 +571,70 @@ fn mind_console_ui_system(
             ui.separator();
             ui.small("提示：按 `~` 键可打开/关闭 bevy-inspector-egui 的世界检查器");
         });
+}
+
+fn try_install_cjk_font(contexts: &mut EguiContexts) -> Option<String> {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return None;
+    };
+    let (font_name, font_bytes) = load_cjk_font_data()?;
+
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        font_name.clone(),
+        egui::FontData::from_owned(font_bytes).into(),
+    );
+
+    if let Some(proportional) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        proportional.insert(0, font_name.clone());
+    }
+    if let Some(monospace) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+        monospace.insert(0, font_name.clone());
+    }
+
+    ctx.set_fonts(fonts);
+    Some(font_name)
+}
+
+fn load_cjk_font_data() -> Option<(String, Vec<u8>)> {
+    if let Ok(path) = std::env::var("SNW_EGUI_FONT") {
+        if !path.trim().is_empty() {
+            let pb = PathBuf::from(path);
+            if let Ok(bytes) = std::fs::read(&pb) {
+                let name = pb
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "custom_cjk_font".to_owned());
+                return Some((format!("snw_cjk_{name}"), bytes));
+            }
+        }
+    }
+
+    let candidates = [
+        r"D:\exe\SNW_ECS\assets\fonts\NotoSansSC-Regular.otf",
+        r"D:\exe\SNW_ECS\assets\fonts\NotoSansCJKsc-Regular.otf",
+        r"C:\Windows\Fonts\simhei.ttf",
+        r"C:\Windows\Fonts\msyh.ttf",
+        r"C:\Windows\Fonts\Deng.ttf",
+        r"C:\Windows\Fonts\simsun.ttc",
+        r"C:\Windows\Fonts\msyh.ttc",
+    ];
+
+    for candidate in candidates {
+        let pb = PathBuf::from(candidate);
+        if !pb.exists() {
+            continue;
+        }
+        if let Ok(bytes) = std::fs::read(&pb) {
+            let name = pb
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "cjk_font".to_owned());
+            return Some((format!("snw_cjk_{name}"), bytes));
+        }
+    }
+
+    None
 }
 
 fn spawn_memory(
