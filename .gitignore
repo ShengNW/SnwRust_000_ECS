@@ -1,0 +1,6 @@
+/target
+/data/*.csv
+/.idea
+/.vscode
+*.user
+*.suo
